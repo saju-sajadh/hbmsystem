@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, Fragment, useState } from "react";
+import React, {  Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { ArrowRightIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import CommentListing from "@/components/CommentListing";
@@ -15,16 +15,40 @@ import ButtonClose from "@/shared/ButtonClose";
 import Input from "@/shared/Input";
 import LikeSaveBtns from "@/components/LikeSaveBtns";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { Amenities_demos, PHOTOS } from "./constant";
 import StayDatesRangeInput from "./StayDatesRangeInput";
 import GuestsInput from "./GuestsInput";
-import SectionDateRange from "../SectionDateRange";
-import { Route } from "next";
+import SectionDateRange from "../../SectionDateRange";
+import { useSession } from "next-auth/react";
 
-export interface ListingStayDetailPageProps {}
 
-const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
+
+
+
+const ListingStayDetailPage = ({}) => {
+  const {data: session} = useSession()
+  const {id} = useParams()
+  const [place, setPlace] = useState(null)
+  const [user, setUser] = useState(null)
+  const [visibility, setVisibility] = useState(false)
+
+  useEffect(()=>{
+    async function fetchdata(){
+      const response = await fetch('/api/id', {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'applications/json',
+        },
+        body: JSON.stringify({id})
+      })
+      const data = await response.json()
+      setPlace(data.place)
+      setUser(data.user)
+    }
+    fetchdata()
+  },[session])
   //
 
   let [isOpenModalAmenities, setIsOpenModalAmenities] = useState(false);
@@ -41,7 +65,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
   }
 
   const handleOpenModalImageGallery = () => {
-    router.push(`${thisPathname}/?modal=PHOTO_TOUR_SCROLLABLE` as Route);
+    router.push(`${thisPathname}/?modal=PHOTO_TOUR_SCROLLABLE` );
   };
 
   const renderSection1 = () => {
@@ -55,7 +79,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
 
         {/* 2 */}
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold">
-          Beach House in Collingwood
+          {place?.title}
         </h2>
 
         {/* 3 */}
@@ -64,7 +88,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           <span>·</span>
           <span>
             <i className="las la-map-marker-alt"></i>
-            <span className="ml-1"> Tokyo, Jappan</span>
+            <span className="ml-1"> {place?.address}</span>
           </span>
         </div>
 
@@ -74,7 +98,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           <span className="ml-2.5 text-neutral-500 dark:text-neutral-400">
             Hosted by{" "}
             <span className="text-neutral-900 dark:text-neutral-200 font-medium">
-              Kevin Francis
+              {user?.name}
             </span>
           </span>
         </div>
@@ -87,25 +111,25 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           <div className="flex items-center space-x-3 ">
             <i className=" las la-user text-2xl "></i>
             <span className="">
-              6 <span className="hidden sm:inline-block">guests</span>
+              {place?.maxguest} <span className="hidden sm:inline-block">guests</span>
             </span>
           </div>
           <div className="flex items-center space-x-3">
             <i className=" las la-bed text-2xl"></i>
             <span className=" ">
-              6 <span className="hidden sm:inline-block">beds</span>
+              {place?.maxguest} <span className="hidden sm:inline-block">beds</span>
             </span>
           </div>
           <div className="flex items-center space-x-3">
             <i className=" las la-bath text-2xl"></i>
             <span className=" ">
-              3 <span className="hidden sm:inline-block">baths</span>
+              1 <span className="hidden sm:inline-block">baths each</span>
             </span>
           </div>
           <div className="flex items-center space-x-3">
             <i className=" las la-door-open text-2xl"></i>
             <span className=" ">
-              2 <span className="hidden sm:inline-block">bedrooms</span>
+              {place?.maxguest} <span className="hidden sm:inline-block">bedrooms</span>
             </span>
           </div>
         </div>
@@ -120,21 +144,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
         <div className="text-neutral-6000 dark:text-neutral-300">
           <span>
-            Providing lake views, The Symphony 9 Tam Coc in Ninh Binh provides
-            accommodation, an outdoor swimming pool, a bar, a shared lounge, a
-            garden and barbecue facilities. Complimentary WiFi is provided.
-          </span>
-          <br />
-          <br />
-          <span>
-            There is a private bathroom with bidet in all units, along with a
-            hairdryer and free toiletries.
-          </span>
-          <br /> <br />
-          <span>
-            The Symphony 9 Tam Coc offers a terrace. Both a bicycle rental
-            service and a car rental service are available at the accommodation,
-            while cycling can be enjoyed nearby.
+            {place?.description}
           </span>
         </div>
       </div>
@@ -153,7 +163,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
         {/* 6 */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 text-sm text-neutral-700 dark:text-neutral-300 ">
-          {Amenities_demos.filter((_, i) => i < 12).map((item) => (
+          {Amenities_demos.filter((item)=> place?.features.includes(item.name)).map((item) => (
             <div key={item.name} className="flex items-center space-x-3">
               <i className={`text-3xl las ${item.icon}`}></i>
               <span className=" ">{item.name}</span>
@@ -163,11 +173,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
 
         {/* ----- */}
         <div className="w-14 border-b border-neutral-200"></div>
-        <div>
-          <ButtonSecondary onClick={openModalAmenities}>
-            View more 20 amenities
-          </ButtonSecondary>
-        </div>
+
         {renderMotalAmenities()}
       </div>
     );
@@ -261,15 +267,15 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           <div className="text-sm sm:text-base text-neutral-6000 dark:text-neutral-300 -mb-4">
             <div className="p-4 bg-neutral-100 dark:bg-neutral-800 flex justify-between items-center space-x-4 rounded-lg">
               <span>Monday - Thursday</span>
-              <span>$199</span>
+              <span>{place?.price}$</span>
             </div>
             <div className="p-4  flex justify-between items-center space-x-4 rounded-lg">
-              <span>Monday - Thursday</span>
-              <span>$199</span>
+              <span>Monday - Friday</span>
+              <span>{place?.price + 50}$</span>
             </div>
             <div className="p-4 bg-neutral-100 dark:bg-neutral-800 flex justify-between items-center space-x-4 rounded-lg">
               <span>Friday - Sunday</span>
-              <span>$219</span>
+              <span>{place?.price + 100}$</span>
             </div>
             <div className="p-4 flex justify-between items-center space-x-4 rounded-lg">
               <span>Rent by month</span>
@@ -306,42 +312,24 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           />
           <div>
             <a className="block text-xl font-medium" href="##">
-              Kevin Francis
+              {user?.name}
             </a>
             <div className="mt-1.5 flex items-center text-sm text-neutral-500 dark:text-neutral-400">
               <StartRating />
-              <span className="mx-2">·</span>
-              <span> 12 places</span>
+           
+             
             </div>
           </div>
         </div>
 
         {/* desc */}
         <span className="block text-neutral-6000 dark:text-neutral-300">
-          Providing lake views, The Symphony 9 Tam Coc in Ninh Binh provides
-          accommodation, an outdoor swimming pool, a bar, a shared lounge, a
-          garden and barbecue facilities...
+          {user?.bio}
         </span>
 
         {/* info */}
         <div className="block text-neutral-500 dark:text-neutral-400 space-y-2.5">
-          <div className="flex items-center space-x-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span>Joined in March 2016</span>
-          </div>
+          
           <div className="flex items-center space-x-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -381,9 +369,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
 
         {/* == */}
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
-        <div>
-          <ButtonSecondary href="/author">See host profile</ButtonSecondary>
-        </div>
+        
       </div>
     );
   };
@@ -435,7 +421,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
         <div>
           <h2 className="text-2xl font-semibold">Location</h2>
           <span className="block mt-2 text-neutral-500 dark:text-neutral-400">
-            San Diego, CA, United States of America (SAN-San Diego Intl.)
+            {place?.address}
           </span>
         </div>
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700" />
@@ -449,7 +435,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
               loading="lazy"
               allowFullScreen
               referrerPolicy="no-referrer-when-downgrade"
-              src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAGVJfZMAKYfZ71nzL_v5i3LjTTWnCYwTY&q=Eiffel+Tower,Paris+France"
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyAGVJfZMAKYfZ71nzL_v5i3LjTTWnCYwTY&q=${place?.address}`}
             ></iframe>
           </div>
         </div>
@@ -466,13 +452,9 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
 
         {/* CONTENT */}
         <div>
-          <h4 className="text-lg font-semibold">Cancellation policy</h4>
+          <h4 className="text-lg font-semibold"> policy</h4>
           <span className="block mt-3 text-neutral-500 dark:text-neutral-400">
-            Refund 50% of the booking value when customers cancel the room
-            within 48 hours after successful booking and 14 days before the
-            check-in time. <br />
-            Then, cancel the room 14 days before the check-in time, get a 50%
-            refund of the total amount paid (minus the service fee).
+            {place?.extrainfo}
           </span>
         </div>
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700" />
@@ -483,30 +465,17 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
           <div className="mt-3 text-neutral-500 dark:text-neutral-400 max-w-md text-sm sm:text-base">
             <div className="flex space-x-10 justify-between p-3 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
               <span>Check-in</span>
-              <span>08:00 am - 12:00 am</span>
+              <span>{place?.checkin}:00  - {parseInt(place?.checkin) + 4}:00 </span>
             </div>
             <div className="flex space-x-10 justify-between p-3">
               <span>Check-out</span>
-              <span>02:00 pm - 04:00 pm</span>
+              <span>{place?.checkout}:00  - {parseInt(place?.checkout) + 4}:00 </span>
             </div>
           </div>
         </div>
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700" />
 
         {/* CONTENT */}
-        <div>
-          <h4 className="text-lg font-semibold">Special Note</h4>
-          <div className="prose sm:prose">
-            <ul className="mt-3 text-neutral-500 dark:text-neutral-400 space-y-2">
-              <li>
-                Ban and I will work together to keep the landscape and
-                environment green and clean by not littering, not using
-                stimulants and respecting people around.
-              </li>
-              <li>Do not sing karaoke past 11:30</li>
-            </ul>
-          </div>
-        </div>
       </div>
     );
   };
@@ -517,7 +486,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
         {/* PRICE */}
         <div className="flex justify-between">
           <span className="text-3xl font-semibold">
-            $119
+            {place?.price}$
             <span className="ml-1 text-base font-normal text-neutral-500 dark:text-neutral-400">
               /night
             </span>
@@ -555,6 +524,16 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
     );
   };
 
+  setTimeout(()=>{
+    setVisibility(true)
+  },3000)
+
+  if(!visibility){
+    return (
+      <div className="flex h-[60vh] justify-center items-center"><ButtonPrimary loading>please wait</ButtonPrimary></div>
+    )
+  }
+
   return (
     <div className="nc-ListingStayDetailPage">
       {/*  HEADER */}
@@ -567,13 +546,13 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
             <Image
               fill
               className="object-cover rounded-md sm:rounded-xl"
-              src={PHOTOS[0]}
+              src={place?.photos[0] || PHOTOS[0]}
               alt=""
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
             />
             <div className="absolute inset-0 bg-neutral-900 bg-opacity-20 opacity-0 hover:opacity-100 transition-opacity"></div>
           </div>
-          {PHOTOS.filter((_, i) => i >= 1 && i < 5).map((item, index) => (
+          {place && place?.photos?.map((item, index) => (
             <div
               key={index}
               className={`relative rounded-md sm:rounded-xl overflow-hidden ${
@@ -584,7 +563,7 @@ const ListingStayDetailPage: FC<ListingStayDetailPageProps> = ({}) => {
                 <Image
                   fill
                   className="object-cover rounded-md sm:rounded-xl "
-                  src={item || ""}
+                  src={item}
                   alt=""
                   sizes="400px"
                 />

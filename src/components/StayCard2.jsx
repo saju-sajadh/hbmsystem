@@ -8,21 +8,18 @@ import SaleOffBadge from "@/components/SaleOffBadge";
 import Badge from "@/shared/Badge";
 import Link from "next/link";
 
-export interface StayCard2Props {
-  className?: string;
-  data?: StayDataType;
-  size?: "default" | "small";
-}
+
 
 const DEMO_DATA = DEMO_STAY_LISTINGS[0];
 
-const StayCard2: FC<StayCard2Props> = ({
+const StayCard2 = ({
   size = "default",
   className = "",
-  data = DEMO_DATA,
+  data = stay,
+  stay
 }) => {
   const {
-    galleryImgs,
+    photos,
     listingCategory,
     address,
     title,
@@ -34,18 +31,18 @@ const StayCard2: FC<StayCard2Props> = ({
     price,
     reviewStart,
     reviewCount,
-    id,
+    _id,
   } = data;
 
   const renderSliderGallery = () => {
     return (
       <div className="relative w-full">
         <GallerySlider
-          uniqueID={`StayCard2_${id}`}
+          uniqueID={`StayCard2_${_id}`}
           ratioClass="aspect-w-12 aspect-h-11"
-          galleryImgs={galleryImgs}
+          galleryImgs={photos}
           imageClass="rounded-lg"
-          href={href}
+          href={`/${_id}/listing-stay-detail`}
         />
         <BtnLikeIcon isLiked={like} className="absolute right-3 top-3 z-[1]" />
         {saleOff && <SaleOffBadge className="absolute left-3 top-3" />}
@@ -58,7 +55,7 @@ const StayCard2: FC<StayCard2Props> = ({
       <div className={size === "default" ? "mt-3 space-y-3" : "mt-2 space-y-2"}>
         <div className="space-y-2">
           <span className="text-sm text-neutral-500 dark:text-neutral-400">
-            {listingCategory.name} · {bedrooms} beds
+            {title}
           </span>
           <div className="flex items-center space-x-2">
             {isAds && <Badge name="ADS" color="green" />}
@@ -117,7 +114,7 @@ const StayCard2: FC<StayCard2Props> = ({
   return (
     <div className={`nc-StayCard2 group relative ${className}`}>
       {renderSliderGallery()}
-      <Link href={href}>{renderContent()}</Link>
+      <Link href={`/${_id}/listing-stay-detail`}>{renderContent()}</Link>
     </div>
   );
 };

@@ -96,60 +96,11 @@ const demoChildMenus: NavItemType[] = [
 const templatesChildrenMenus: NavItemType[] = [
   {
     id: ncNanoId(),
-    href: "/add-listing/1" as Route,
+    href: "/add-listing" as Route,
     name: "Add listing",
-    type: "dropdown",
+    type: "none",
     children: [
-      {
-        id: ncNanoId(),
-        href: "/add-listing/1" as Route,
-        name: "Add listing 1",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/2" as Route,
-        name: "Add listing 2",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/3" as Route,
-        name: "Add listing 3",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/4" as Route,
-        name: "Add listing 4",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/5" as Route,
-        name: "Add listing 5",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/6" as Route,
-        name: "Add listing 6",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/7" as Route,
-        name: "Add listing 7",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/8" as Route,
-        name: "Add listing 8",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/9" as Route,
-        name: "Add listing 9",
-      },
-      {
-        id: ncNanoId(),
-        href: "/add-listing/10" as Route,
-        name: "Add listing 10",
-      },
+      
     ],
   },
   //
