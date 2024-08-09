@@ -10,6 +10,8 @@ import Pagination from "@/shared/Pagination";
 import TabFilters from "./TabFilters";
 import Heading2 from "@/shared/Heading2";
 import StayCard2 from "@/components/StayCard2";
+import { useUser } from "@clerk/nextjs";
+import { getAllListings } from "@/actions/server";
 
 const DEMO_STAYS = DEMO_STAY_LISTINGS.filter((_, i) => i < 12);
 export interface SectionGridHasMapProps {}
@@ -17,6 +19,19 @@ export interface SectionGridHasMapProps {}
 const SectionGridHasMap: FC<SectionGridHasMapProps> = () => {
   const [currentHoverID, setCurrentHoverID] = useState<string | number>(-1);
   const [showFullMapFixed, setShowFullMapFixed] = useState(false);
+  const [places, setplaces] = useState< any[]>([])
+  const { user } = useUser()
+
+
+  useEffect(()=>{
+    async function fetchPlace(){
+      if(user){
+        const places = await getAllListings(user?.id)
+        setplaces(places)
+      }
+    }
+    fetchPlace()
+  },[user])
 
   return (
     <div>
@@ -28,7 +43,7 @@ const SectionGridHasMap: FC<SectionGridHasMapProps> = () => {
             <TabFilters />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 2xl:gap-x-6 gap-y-8">
-            {DEMO_STAYS.map((item) => (
+            {places.length > 0 && places.map((item) => (
               <div
                 key={item.id}
                 onMouseEnter={() => setCurrentHoverID((_) => item.id)}

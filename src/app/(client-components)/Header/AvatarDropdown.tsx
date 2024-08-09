@@ -1,19 +1,32 @@
 'use client'
 
 import { Popover, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Avatar from "@/shared/Avatar";
 import SwitchDarkMode2 from "@/shared/SwitchDarkMode2";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { SignOutButton, useUser } from "@clerk/nextjs";
+import { fetchUserInfo } from "@/actions/server";
+
+
 interface Props {
   className?: string;
+  imgUrl?: string;
 }
 
-export default function AvatarDropdown({ className = "" }: Props) {
+export default function AvatarDropdown({ className = "", imgUrl }: Props) {
 
-  const {data: session} = useSession()
-  console.log(session)
+  const { user }  = useUser()
+  const [session, setSession] = useState< any >()
+  useEffect(()=>{
+    const fetchUser = async () => {
+      if(user){
+        const session = await fetchUserInfo(user.id)
+        setSession(session)
+      }
+    }
+    fetchUser()
+  },[user])
 
   return (
     <>
@@ -23,7 +36,7 @@ export default function AvatarDropdown({ className = "" }: Props) {
             <Popover.Button
               className={`self-center w-10 h-10 sm:w-12 sm:h-12 rounded-full text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none flex items-center justify-center`}
             >
-              <Avatar sizeClass="w-8 h-8 sm:w-9 sm:h-9" />
+              <Avatar imgUrl={imgUrl} sizeClass="w-8 h-8 sm:w-9 sm:h-9" />
             </Popover.Button>
             <Transition
               as={Fragment}
@@ -38,11 +51,11 @@ export default function AvatarDropdown({ className = "" }: Props) {
                 <div className="overflow-hidden rounded-3xl shadow-lg ring-1 ring-black ring-opacity-5">
                   <div className="relative grid grid-cols-1 gap-6 bg-white dark:bg-neutral-800 py-7 px-6">
                     <div className="flex items-center space-x-3">
-                      <Avatar sizeClass="w-12 h-12" />
+                      <Avatar imgUrl={imgUrl} sizeClass="w-12 h-12" />
 
                       <div className="flex-grow">
-                        <h4 className="text-sm">{session ? session.user?.email : '*******.com'}</h4>
-                        <p className="text-xs mt-0.5"></p>
+                        <h4 className="text-sm">{user && user?.fullName ? user?.fullName : user?.id}</h4>
+                        <p className="text-xs mt-0.5">{user && user?.primaryEmailAddress?.emailAddress ? user?.primaryEmailAddress?.emailAddress  : user?.primaryEmailAddressId}</p>
                       </div>
                     </div>
 
@@ -131,36 +144,12 @@ export default function AvatarDropdown({ className = "" }: Props) {
                         </svg>
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium ">{"My bookings"}</p>
+                        <p className="text-sm font-medium ">{session?.role === 'owner' ? 'My Listings' : 'My bookings'}</p>
                       </div>
                     </Link>
 
                     {/* ------------------ 2 --------------------- */}
-                    <Link
-                      href={"/account-savelists"}
-                      className="flex items-center p-2 -m-3 transition duration-150 ease-in-out rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 focus:outline-none focus-visible:ring focus-visible:ring-orange-500 focus-visible:ring-opacity-50"
-                      onClick={() => close()}
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0 text-neutral-500 dark:text-neutral-300">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M12.62 20.81C12.28 20.93 11.72 20.93 11.38 20.81C8.48 19.82 2 15.69 2 8.68998C2 5.59998 4.49 3.09998 7.56 3.09998C9.38 3.09998 10.99 3.97998 12 5.33998C13.01 3.97998 14.63 3.09998 16.44 3.09998C19.51 3.09998 22 5.59998 22 8.68998C22 15.69 15.52 19.82 12.62 20.81Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium ">{"Wishlist"}</p>
-                      </div>
-                    </Link>
+                    
 
                     <div className="w-full border-b border-neutral-200 dark:border-neutral-700" />
 
@@ -269,10 +258,10 @@ export default function AvatarDropdown({ className = "" }: Props) {
                     </Link>
 
                     {/* ------------------ 2 --------------------- */}
-                    <Link
-                      href={"/#"}
+                    <div
+              
                       className="flex items-center p-2 -m-3 transition duration-150 ease-in-out rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 focus:outline-none focus-visible:ring focus-visible:ring-orange-500 focus-visible:ring-opacity-50"
-                      onClick={() => close()}
+                     
                     >
                       <div className="flex items-center justify-center flex-shrink-0 text-neutral-500 dark:text-neutral-300">
                         <svg
@@ -306,9 +295,9 @@ export default function AvatarDropdown({ className = "" }: Props) {
                         </svg>
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium ">{"Log out"}</p>
+                        <p className="text-sm font-medium "><SignOutButton><Link href={'/'}>Sign out</Link></SignOutButton></p>
                       </div>
-                    </Link>
+                    </div>
                   </div>
                 </div>
               </Popover.Panel>

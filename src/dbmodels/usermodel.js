@@ -1,17 +1,15 @@
 const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
-  username: {
+  userid: {
     type: String,
-  },
-  password: {
-    type: String,
-    required: true,
   },
   email: {
     type: String,
-    required: true,
   },
   name: {
+    type: String,
+  },
+  role: {
     type: String,
   },
   gender: {
@@ -25,18 +23,15 @@ const userSchema = new mongoose.Schema({
     match: [/^\d{10}$/, "Please use a valid contact number."],
   },
   address: {
-    street: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String,
-  },
-  profilePicture: {
-    type: String, // URL to the profile picture
+    type: String
   },
   bio: {
     type: String,
     trim: true,
+  },
+  active: {
+    type: Boolean,
+    default: true,
   }
 });
 

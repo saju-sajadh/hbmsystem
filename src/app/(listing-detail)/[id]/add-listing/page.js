@@ -7,17 +7,17 @@ import TimeToLeaveIcon from '@mui/icons-material/TimeToLeave';
 import PetsIcon from '@mui/icons-material/Pets';
 import RoomPreferencesIcon from '@mui/icons-material/RoomPreferences';
 import LocalTaxiIcon from '@mui/icons-material/LocalTaxi';
-import React, {useState} from 'react';
-import axios from 'axios'
+import React, {useEffect, useState} from 'react';
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from '../../../firebaseSdk'
-import { useRouter } from 'next/navigation';
+import { storage } from '../../../../../firebaseSdk';
+import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { addNewPlaceorUpdate } from '@/actions/server';
+import { addNewPlaceorUpdate, fetchLisingsDetails } from '@/actions/server';
 import toast from 'react-hot-toast';
 
 export default function Addplace(){
 
+    const { id } = useParams()
     const [Validphoto,setValidphoto] = useState(true);
     const [addedPhotos,setAddedPhotos] = useState([]);
     const [imageCount,setImageCount] = useState(true);
@@ -33,6 +33,27 @@ export default function Addplace(){
     const [price, setPrice] = useState('');
     const router = useRouter()
     const {user} = useUser()
+    
+
+
+    useEffect(()=>{
+        async function fetchListing(){
+            if(id){
+                const listing = await fetchLisingsDetails(id)
+                setTitle(listing?.title)
+                setAddress(listing?.address)
+                setFeatures(listing?.features)
+                setDescription(listing?.description)
+                setExtraInfo(listing?.extrainfo)
+                setCheckin(listing?.checkin)
+                setCheckout(listing?.checkout)
+                setMaxguest(listing?.maxguest)
+                setPrice(listing?.price)
+                setAddedPhotos(listing?.photos)
+            }
+        }
+        fetchListing()
+    },[id])
     
     
     
@@ -59,7 +80,7 @@ export default function Addplace(){
       const addNewPlace = async (ev) => {
         ev.preventDefault();
 
-        if(!user || title.length === 0 || address.length === 0 || description.length === 0 || extraInfo.length === 0 || checkin.length === 0 || checkout.length === 0 || maxguest.length === 0 || price.length === 0){   
+        if(!user || !id || title.length === 0 || address.length === 0 || description.length === 0 || extraInfo.length === 0 || checkin.length === 0 || checkout.length === 0 || maxguest.length === 0 || price.length === 0){   
                 setRequiredData(false);
         }
         else if(filteredArray.length < 3){
@@ -82,7 +103,7 @@ export default function Addplace(){
                 };
                 
                 // Call the server-side function
-                const result = await addNewPlaceorUpdate(placeData);
+                const result = await addNewPlaceorUpdate(placeData, id);
                 if(result) {
                      toast.success('Place added successfully', {position: 'top-right'}) 
                      router.push(`/${result}/listing-stay-detail`)
@@ -214,21 +235,21 @@ export default function Addplace(){
                     <div className="my-6 w-3/4">
                         <h2 className="font-semibold py-2 text-3xl">Check in&out Times <span className="text-red-600"> *</span></h2>
                         <p className="italic text-base  lg:text-lg">Add check in&out times, remember to have some time window for cleaning the room between guests.</p>
-                        <div className="grid lg:grid-cols-4 lg:mt-4">
+                        <div className="grid lg:grid-cols-4 gap-4 lg:items-center lg:mt-4">
                             <div className="">
-                                <label className="font-semibold py-2 text-3xl">Check In Time</label>
+                                <label className="font-semibold py-2 text-xl">Check In Time</label>
                                 <input spellCheck="false" value={checkin} onChange={ev => setCheckin(ev.target.value)} type="text" className="mt-4 px-2 border border-gray-500 rounded focus:outline-none" placeholder="14:00"/>
                             </div>
                             <div className="">
-                                <label className="font-semibold py-2 text-3xl">Check Out Time</label>
+                                <label className="font-semibold py-2 text-xl">Check Out Time</label>
                                 <input spellCheck="false" value={checkout} onChange={ev => setCheckout(ev.target.value)} type="text" className="mt-4 px-2 border border-gray-500 rounded focus:outline-none" placeholder="23.00"/>
                             </div>
                             <div className="">
-                                <label className="font-semibold py-2 text-3xl">Max Guests</label>
+                                <label className="font-semibold py-2 text-xl">Max Guests</label>
                                 <input spellCheck="false" value={maxguest} onChange={ev => setMaxguest(ev.target.value)}  onKeyDown={handleNumberKeyDown} type="text" className="mt-4 px-2 border border-gray-500 rounded focus:outline-none" placeholder="100"/>
                             </div>
                             <div className="">
-                                <label className="font-semibold py-2 text-3xl">Price ($) per day</label>
+                                <label className="font-semibold py-2 text-xl">Price ($) per day</label>
                                 <input spellCheck="false" value={price} onChange={ev => setPrice(ev.target.value)} onKeyDown={handleNumberKeyDown} type="text" className="mt-4 px-2 border border-gray-500 rounded focus:outline-none" placeholder="200"/>
                             </div>
                         </div>

@@ -1,30 +1,58 @@
 "use client";
 
 import { Tab } from "@headlessui/react";
-import CarCard from "@/components/CarCard";
-import CommentListing from "@/components/CommentListing";
-import ExperiencesCard from "@/components/ExperiencesCard";
 import StartRating from "@/components/StartRating";
-import StayCard from "@/components/StayCard2";
-import {
-  DEMO_CAR_LISTINGS,
-  DEMO_EXPERIENCES_LISTINGS,
-  DEMO_STAY_LISTINGS,
-} from "@/data/listings";
-import React, { FC, Fragment, useState } from "react";
+import BookCard from "@/components/BookCard";
+import React, { FC, Fragment, useEffect, useState } from "react";
 import Avatar from "@/shared/Avatar";
-import ButtonSecondary from "@/shared/ButtonSecondary";
 import SocialsList from "@/shared/SocialsList";
+import { useUser } from "@clerk/nextjs";
+import { fetchLisingsDetails, fetchUserInfo, getAllbookings, getAllListings } from "@/actions/server";
 
 export interface AuthorPageProps {}
 
 const AuthorPage: FC<AuthorPageProps> = ({}) => {
-  let [categories] = useState(["Stays", "Experiences", "Car for rent"]);
+  let [categories] = useState(["Stays"]);
+  const  { user } = useUser()
+  const [ session, setSession] = useState< any >()
+  const [bookings, setBookings] = useState< any []>([])
+  const [places, setPlaces] = useState<any[]>([]); 
+
+
+  useEffect(()=>{
+    async function fetchUserAndBookings(){
+      try {
+        const session = await fetchUserInfo(user?.id)
+        setSession(session)
+        if(session && session.role === "owner"){
+          const listings = await getAllListings(user?.id)
+          setPlaces(listings)
+        }else{
+          const bookings = await getAllbookings(user?.id)
+          setBookings(bookings)
+          console.log('Bookings:', bookings);
+          if (bookings.length > 0) {
+            const places = await Promise.all(bookings.map(async (booking: any) => {
+              const place = await fetchLisingsDetails(booking.place);
+              console.log('Fetched place:', place);
+              return place;
+            }));
+            setPlaces(places);
+        }
+        }
+  
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchUserAndBookings()
+  },[user])
 
   const renderSidebar = () => {
     return (
       <div className=" w-full flex flex-col items-center text-center sm:rounded-2xl sm:border border-neutral-200 dark:border-neutral-700 space-y-6 sm:space-y-7 px-0 sm:p-6 xl:p-8">
         <Avatar
+          imgUrl={user?.hasImage ? user.imageUrl : ""}
           hasChecked
           hasCheckedClass="w-6 h-6 -top-0.5 right-2"
           sizeClass="w-28 h-28"
@@ -32,14 +60,13 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
 
         {/* ---- */}
         <div className="space-y-3 text-center flex flex-col items-center">
-          <h2 className="text-3xl font-semibold">Kevin Francis</h2>
+          <h2 className="text-3xl font-semibold">{session?.name}</h2>
           <StartRating className="!text-base" />
         </div>
 
         {/* ---- */}
         <p className="text-neutral-500 dark:text-neutral-400">
-          Providing lake views, The Symphony 9 Tam Coc in Ninh Binh provides
-          accommodation, an outdoor.
+          {session?.bio}
         </p>
 
         {/* ---- */}
@@ -69,7 +96,7 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
               />
             </svg>
             <span className="text-neutral-6000 dark:text-neutral-300">
-              Ha Noi, Viet Nam
+              {session?.address}
             </span>
           </div>
           <div className="flex items-center space-x-4">
@@ -108,7 +135,7 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
               />
             </svg>
             <span className="text-neutral-6000 dark:text-neutral-300">
-              Joined in March 2016
+              Joined in 2024
             </span>
           </div>
         </div>
@@ -120,11 +147,7 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
     return (
       <div className="listingSection__wrap">
         <div>
-          <h2 className="text-2xl font-semibold">{`Kevin Francis's listings`}</h2>
-          <span className="block mt-2 text-neutral-500 dark:text-neutral-400">
-            {`Kevin Francis's listings is very rich, 5 star reviews help him to be
-            more branded.`}
-          </span>
+          <h2 className="text-2xl font-semibold">{`${session?.name}'s ${session?.role === 'owner' ? 'listings' : 'bookings'}`}</h2>
         </div>
         <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
 
@@ -150,34 +173,11 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
             <Tab.Panels>
               <Tab.Panel className="">
                 <div className="mt-8 grid grid-cols-1 gap-6 md:gap-7 sm:grid-cols-2">
-                  {DEMO_STAY_LISTINGS.filter((_, i) => i < 4).map((stay) => (
-                    <StayCard key={stay.id} data={stay} />
-                  ))}
+                  {places.length > 0 && places.map((stay, index) => {
+                    return <BookCard key={index} data={stay} session={session} bookings={bookings[index]} />
+                  })}
                 </div>
                 <div className="flex mt-11 justify-center items-center">
-                  <ButtonSecondary>Show me more</ButtonSecondary>
-                </div>
-              </Tab.Panel>
-              <Tab.Panel className="">
-                <div className="mt-8 grid grid-cols-1 gap-6 md:gap-7 sm:grid-cols-2">
-                  {DEMO_EXPERIENCES_LISTINGS.filter((_, i) => i < 4).map(
-                    (stay) => (
-                      <ExperiencesCard key={stay.id} data={stay} />
-                    )
-                  )}
-                </div>
-                <div className="flex mt-11 justify-center items-center">
-                  <ButtonSecondary>Show me more</ButtonSecondary>
-                </div>
-              </Tab.Panel>
-              <Tab.Panel className="">
-                <div className="mt-8 grid grid-cols-1 gap-6 md:gap-7 sm:grid-cols-2">
-                  {DEMO_CAR_LISTINGS.filter((_, i) => i < 4).map((stay) => (
-                    <CarCard key={stay.id} data={stay} />
-                  ))}
-                </div>
-                <div className="flex mt-11 justify-center items-center">
-                  <ButtonSecondary>Show me more</ButtonSecondary>
                 </div>
               </Tab.Panel>
             </Tab.Panels>
@@ -187,26 +187,7 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
     );
   };
 
-  const renderSection2 = () => {
-    return (
-      <div className="listingSection__wrap">
-        {/* HEADING */}
-        <h2 className="text-2xl font-semibold">Reviews (23 reviews)</h2>
-        <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
-
-        {/* comment */}
-        <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-          <CommentListing hasListingTitle className="pb-8" />
-          <CommentListing hasListingTitle className="py-8" />
-          <CommentListing hasListingTitle className="py-8" />
-          <CommentListing hasListingTitle className="py-8" />
-          <div className="pt-8">
-            <ButtonSecondary>View more 20 reviews</ButtonSecondary>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  
 
   return (
     <div className={`nc-AuthorPage `}>
@@ -216,7 +197,7 @@ const AuthorPage: FC<AuthorPageProps> = ({}) => {
         </div>
         <div className="w-full lg:w-3/5 xl:w-2/3 space-y-8 lg:space-y-10 lg:pl-10 flex-shrink-0">
           {renderSection1()}
-          {renderSection2()}
+        
         </div>
       </main>
     </div>

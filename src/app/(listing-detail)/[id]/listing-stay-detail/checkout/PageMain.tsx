@@ -1,8 +1,7 @@
 "use client";
 
 import { Tab } from "@headlessui/react";
-import { PencilSquareIcon } from "@heroicons/react/24/outline";
-import React, { FC, Fragment, useState } from "react";
+import React, { FC, Fragment, useEffect, useState } from "react";
 import visaPng from "@/images/vis.png";
 import mastercardPng from "@/images/mastercard.svg";
 import Input from "@/shared/Input";
@@ -13,27 +12,140 @@ import StartRating from "@/components/StartRating";
 import NcModal from "@/shared/NcModal";
 import ModalSelectDate from "@/components/ModalSelectDate";
 import converSelectedDateToString from "@/utils/converSelectedDateToString";
-import ModalSelectGuests from "@/components/ModalSelectGuests";
 import Image from "next/image";
-import { GuestsObject } from "../(client-components)/type";
+import { createBooking, fetchLisingsDetails, fetchUserInfo } from "@/actions/server";
+import toast from "react-hot-toast";
+import { useUser } from "@clerk/nextjs";
+import { LoadingOutlined } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
+
 
 export interface CheckOutPagePageMainProps {
   className?: string;
+  startDate?: Date;
+  endDate?: Date;
+  placePrice?: any;
+  Listid?: any;
+  nights?: any;
+  guests?: any;
 }
 
-const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
-  className = "",
-}) => {
-  const [startDate, setStartDate] = useState<Date | null>(
-    new Date("2023/02/06")
-  );
-  const [endDate, setEndDate] = useState<Date | null>(new Date("2023/02/23"));
+export type Place = {
+            owner: any;
+            title: any;
+            address: any;
+            photos: any;
+            description: any;
+            features: any;
+            extrainfo: any;
+            checkin: any;
+            checkout: any;
+            maxguest: any;
+            price: any;
+            firstName: any;
+            lastName: any;
+            hasImage: any;
+            imageUrl: any;
+}
 
-  const [guests, setGuests] = useState<GuestsObject>({
-    guestAdults: 2,
-    guestChildren: 1,
-    guestInfants: 1,
-  });
+type Info = {
+        place: any;
+       user: any;
+       checkin: any;
+       checkout: any;
+       numberofguests: any;
+       name: any;
+       phone: any;
+       price: any;
+       email: any;
+      }
+
+const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
+  className = "", startDate, endDate, placePrice, Listid, nights, guests
+}) => {
+
+  const [place, setPlace] = useState< Place | null | undefined >()
+  const [phone, setPhone] = useState< String >("")
+  const [loading, setLoading] = useState< boolean | undefined >(false)
+
+  const { user } = useUser()
+  const router = useRouter()
+
+
+  useEffect(()=>{
+    async function fetchdata(){
+      
+        if(user){
+          const listing: Place | undefined = await fetchLisingsDetails(Listid)
+          setPlace(listing) 
+        const { contactNumber } = await fetchUserInfo(user?.id)
+        setPhone(contactNumber)
+        }
+    }
+    fetchdata()
+  },[user])
+
+
+  const payPal = async (formdata: FormData) => {
+    setLoading(true)
+    const email = formdata.get('email')
+    const password = formdata.get('password')
+    if(!email || !password || !user){
+      toast.error('Login to payPal', {position: "top-right"})
+      setLoading(false)
+      return
+    }
+    const bookInfo: Info = {
+       place: Listid,
+       user: user?.id,
+       checkin: startDate,
+       checkout: endDate,
+       numberofguests: guests,
+       name: user?.firstName && user?.lastName ? user?.firstName+" "+user?.lastName : user?.id,
+       phone: phone? phone : "",
+       price: placePrice*nights,
+       email: user?.emailAddresses[0]?.emailAddress
+    }
+    const booking = await createBooking(bookInfo)
+    if(booking._id){
+      router.push(`/${Listid}/listing-stay-detail/pay-done?startDate=${startDate}&endDate=${endDate}&placePrice=${placePrice}&nights=${nights}&guests=${guests}&method=PayPal&bookingid=${booking._id}`);
+    }else{
+      toast.error('Failed payment', {position: "top-right"})
+    }  
+    setLoading(false)
+  }
+
+  const cardPayment = async (formdata: FormData) => {
+    setLoading(true)
+    const card = formdata.get('card')
+    const cvc = formdata.get('cvc')
+    const name = formdata.get('name')
+    const expiary = formdata.get('expiary')
+    if(!card || !name || !cvc || !expiary || !user){
+      toast.error('Add Card details', {position: "top-right"})
+      setLoading(false)
+      return
+    }
+    const bookInfo: Info = {
+      place: Listid,
+      user: user?.id,
+      checkin: startDate,
+      checkout: endDate,
+      numberofguests: guests,
+      name: user?.firstName && user?.lastName ? user?.firstName+" "+user?.lastName : user?.id,
+      phone: phone? phone : "",
+      price: placePrice*nights,
+      email: user?.emailAddresses[0]?.emailAddress ? user?.emailAddresses[0]?.emailAddress : ""
+   }
+   const booking = await createBooking(bookInfo)
+   if(booking._id){
+    router.push(`/${Listid}/listing-stay-detail/pay-done?startDate=${startDate}&endDate=${endDate}&placePrice=${placePrice}&nights=${nights}&guests=${guests}&method=PayPal&bookingid=${booking._id}`);
+  }else{
+    toast.error('Failed payment', {position: "top-right"})
+  } 
+   setLoading(false)
+  }
+
 
   const renderSidebar = () => {
     return (
@@ -45,21 +157,23 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
                 alt=""
                 fill
                 sizes="200px"
-                src="https://images.pexels.com/photos/6373478/pexels-photo-6373478.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+                src={place?.photos[0] ? place?.photos[0] : "https://images.pexels.com/photos/6373478/pexels-photo-6373478.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"}
               />
             </div>
           </div>
           <div className="py-5 sm:px-5 space-y-3">
             <div>
               <span className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-1">
-                Hotel room in Tokyo, Jappan
+                {place?.title}
               </span>
               <span className="text-base font-medium mt-1 block">
-                The Lounge & Bar
+                {place?.address}
               </span>
             </div>
             <span className="block  text-sm text-neutral-500 dark:text-neutral-400">
-              2 beds · 2 baths
+              {place?.features && place.features.map((feature: any, index: Number)=>(
+                <p key={feature}>{(feature).toUpperCase()+" "}</p>
+              ))}
             </span>
             <div className="w-10 border-b border-neutral-200  dark:border-neutral-700"></div>
             <StartRating />
@@ -68,8 +182,8 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
         <div className="flex flex-col space-y-4">
           <h3 className="text-2xl font-semibold">Price detail</h3>
           <div className="flex justify-between text-neutral-6000 dark:text-neutral-300">
-            <span>$19 x 3 day</span>
-            <span>$57</span>
+            <span>${placePrice}x {nights} day</span>
+            <span>${placePrice * nights}</span>
           </div>
           <div className="flex justify-between text-neutral-6000 dark:text-neutral-300">
             <span>Service charge</span>
@@ -79,7 +193,7 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
           <div className="border-b border-neutral-200 dark:border-neutral-700"></div>
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>$57</span>
+            <span>${placePrice * nights}</span>
           </div>
         </div>
       </div>
@@ -113,7 +227,7 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
             <ModalSelectDate
               renderChildren={({ openModal }) => (
                 <button
-                  onClick={openModal}
+                  
                   className="text-left flex-1 p-5 flex justify-between space-x-5 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                   type="button"
                 >
@@ -123,33 +237,12 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
                       {converSelectedDateToString([startDate, endDate])}
                     </span>
                   </div>
-                  <PencilSquareIcon className="w-6 h-6 text-neutral-6000 dark:text-neutral-400" />
+                  
                 </button>
               )}
             />
 
-            <ModalSelectGuests
-              renderChildren={({ openModal }) => (
-                <button
-                  type="button"
-                  onClick={openModal}
-                  className="text-left flex-1 p-5 flex justify-between space-x-5 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm text-neutral-400">Guests</span>
-                    <span className="mt-1.5 text-lg font-semibold">
-                      <span className="line-clamp-1">
-                        {`${
-                          (guests.guestAdults || 0) +
-                          (guests.guestChildren || 0)
-                        } Guests, ${guests.guestInfants || 0} Infants`}
-                      </span>
-                    </span>
-                  </div>
-                  <PencilSquareIcon className="w-6 h-6 text-neutral-6000 dark:text-neutral-400" />
-                </button>
-              )}
-            />
+            
           </div>
         </div>
 
@@ -196,54 +289,52 @@ const CheckOutPagePageMain: FC<CheckOutPagePageMainProps> = ({
 
               <Tab.Panels>
                 <Tab.Panel className="space-y-5">
+                  <form action={payPal}>
                   <div className="space-y-1">
+                    <Label>Email </Label>
+                    <Input type="email" placeholder="example@gmail.com" name="email" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Password </Label>
+                    <Input type="password" placeholder="********" name="password" />
+                  </div>
+                  <div className="pt-8">
+              <ButtonPrimary disabled={loading} type="submit">{loading ? <LoadingOutlined/> :'Confirm and pay'}</ButtonPrimary>
+            </div>
+                  </form>
+                </Tab.Panel>
+                <Tab.Panel className="space-y-5">
+                 <form action={cardPayment}>
+                 <div className="space-y-1">
                     <Label>Card number </Label>
-                    <Input defaultValue="111 112 222 999" />
+                    <Input placeholder="111 112 222 999" name="card" />
                   </div>
                   <div className="space-y-1">
                     <Label>Card holder </Label>
-                    <Input defaultValue="JOHN DOE" />
+                    <Input placeholder="JOHN DOE" name="name" />
                   </div>
                   <div className="flex space-x-5  ">
                     <div className="flex-1 space-y-1">
                       <Label>Expiration date </Label>
-                      <Input type="date" defaultValue="MM/YY" />
+                      <Input type="date" placeholder="MM/YY" name="expiary" />
                     </div>
                     <div className="flex-1 space-y-1">
                       <Label>CVC </Label>
-                      <Input />
+                      <Input type="password" name="cvc" onKeyPress={(event) => {
+                        if (!/\d/.test(event.key)) {
+                        event.preventDefault();
+                        }
+                      }} maxLength={3}/>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Messager for author </Label>
-                    <Textarea placeholder="..." />
-                    <span className="text-sm text-neutral-500 block">
-                      Write a few sentences about yourself.
-                    </span>
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="space-y-5">
-                  <div className="space-y-1">
-                    <Label>Email </Label>
-                    <Input type="email" defaultValue="example@gmail.com" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Password </Label>
-                    <Input type="password" defaultValue="***" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Messager for author </Label>
-                    <Textarea placeholder="..." />
-                    <span className="text-sm text-neutral-500 block">
-                      Write a few sentences about yourself.
-                    </span>
-                  </div>
+                  <div className="pt-8">
+              <ButtonPrimary disabled={loading} type="submit">{loading ? <LoadingOutlined/> :'Confirm and pay'}</ButtonPrimary>
+            </div>
+                 </form>
                 </Tab.Panel>
               </Tab.Panels>
             </Tab.Group>
-            <div className="pt-8">
-              <ButtonPrimary href={"/pay-done"}>Confirm and pay</ButtonPrimary>
-            </div>
+            
           </div>
         </div>
       </div>

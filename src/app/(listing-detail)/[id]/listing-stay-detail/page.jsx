@@ -20,35 +20,42 @@ import { Amenities_demos, PHOTOS } from "./constant";
 import StayDatesRangeInput from "./StayDatesRangeInput";
 import GuestsInput from "./GuestsInput";
 import SectionDateRange from "../../SectionDateRange";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
+import { fetchLisingsDetails, fetchUserInfo } from "@/actions/server";
+import toast from "react-hot-toast";
+import { PencilIcon } from "@heroicons/react/24/solid";
+
+
 
 
 
 
 
 const ListingStayDetailPage = ({}) => {
-  const {data: session} = useSession()
+
   const {id} = useParams()
   const [place, setPlace] = useState(null)
-  const [user, setUser] = useState(null)
+  const { user } = useUser()
   const [visibility, setVisibility] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [totalGuests, setTotalGuests] = useState(0);
+  const [role, setRole] = useState('')
 
   useEffect(()=>{
     async function fetchdata(){
-      const response = await fetch('/api/id', {
-        method: 'POST',
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'applications/json',
-        },
-        body: JSON.stringify({id})
-      })
-      const data = await response.json()
-      setPlace(data.place)
-      setUser(data.user)
+      if(user){
+        const listing = await fetchLisingsDetails(id)
+      setPlace(listing)
+      const userData = await fetchUserInfo(user?.id)
+      const { role } = await userData
+      setRole(role)
+      listing?.owner === user?.id ? setIsOwner(true) : setIsOwner(false)
+      }
     }
     fetchdata()
-  },[session])
+  },[user])
   //
 
   let [isOpenModalAmenities, setIsOpenModalAmenities] = useState(false);
@@ -73,7 +80,7 @@ const ListingStayDetailPage = ({}) => {
       <div className="listingSection__wrap !space-y-6">
         {/* 1 */}
         <div className="flex justify-between items-center">
-          <Badge name="Wooden house" />
+          <Badge name={place?.title} />
           <LikeSaveBtns />
         </div>
 
@@ -94,11 +101,11 @@ const ListingStayDetailPage = ({}) => {
 
         {/* 4 */}
         <div className="flex items-center">
-          <Avatar hasChecked sizeClass="h-10 w-10" radius="rounded-full" />
+          <Avatar  imgUrl={place?.hasImage ? place?.imageUrl : null} hasChecked sizeClass="h-10 w-10" radius="rounded-full" />
           <span className="ml-2.5 text-neutral-500 dark:text-neutral-400">
             Hosted by{" "}
             <span className="text-neutral-900 dark:text-neutral-200 font-medium">
-              {user?.name}
+              {place?.firstName || place?.lastName ? place?.firstName : `${place?.owner} (please add relevent details)` }
             </span>
           </span>
         </div>
@@ -305,6 +312,7 @@ const ListingStayDetailPage = ({}) => {
         {/* host */}
         <div className="flex items-center space-x-4">
           <Avatar
+          imgUrl={place?.hasImage ? place?.imageUrl : null}
             hasChecked
             hasCheckedClass="w-4 h-4 -top-0.5 right-0.5"
             sizeClass="h-14 w-14"
@@ -312,7 +320,7 @@ const ListingStayDetailPage = ({}) => {
           />
           <div>
             <a className="block text-xl font-medium" href="##">
-              {user?.name}
+            {place?.firstName || place?.lastName ? place?.firstName: `${place?.owner} (please add relevent details)` }
             </a>
             <div className="mt-1.5 flex items-center text-sm text-neutral-500 dark:text-neutral-400">
               <StartRating />
@@ -481,48 +489,106 @@ const ListingStayDetailPage = ({}) => {
   };
 
   const renderSidebar = () => {
-    return (
-      <div className="listingSectionSidebar__wrap shadow-xl">
-        {/* PRICE */}
-        <div className="flex justify-between">
-          <span className="text-3xl font-semibold">
-            {place?.price}$
-            <span className="ml-1 text-base font-normal text-neutral-500 dark:text-neutral-400">
-              /night
+
+    if (isOwner) {
+      return (
+        <div className="listingSectionSidebar__wrap shadow-xl">
+          {/* PRICE */}
+          <div className="flex items-center gap-4">  
+              Edit your place <PencilIcon className="w-5 h-5 text-base border border-black p-1 rounded-md cursor-pointer"/> 
+          </div>
+
+    {/* SUBMIT */}
+    <ButtonPrimary onClick={()=>{
+      router.push(`/${id}/add-listing`)
+    }} >EDIT</ButtonPrimary>
+  </div>
+      );
+    } else {
+
+      if(role === 'owner'){
+        return null
+      }else{
+        const serviceCharge = 0; // Example service charge
+  
+      const calculateNights = (start, end) => {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const diffTime = Math.abs(endDate - startDate);
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      };
+  
+      
+  
+      const nights = startDate && endDate ? calculateNights(startDate, endDate) : 0;
+      const totalPrice = place?.price * nights + serviceCharge;
+  
+      const handleDatesChange = ({ startDate, endDate }) => {
+        setStartDate(startDate);
+        setEndDate(endDate);
+        console.log(startDate, endDate)
+      };
+
+      const handleGuestsChange = (guests) => {
+        const total = guests.guestAdults + guests.guestChildren + guests.guestInfants;
+        setTotalGuests(total);
+      };
+
+      const handleCheckout = async (e) => {
+        e.preventDefault();
+        if(!startDate || !endDate || !totalGuests){
+          toast.error('select dates please!', {position: "top-right"})
+          return
+        }
+        const  start = startDate ? startDate.toISOString() : ("Sun Dec 01 2024 00:00:00 GMT+0530 (India Standard Time)").toISOString()
+        const  end = endDate ? endDate.toISOString() : ("Wed Dec 25 2024 00:00:00 GMT+0530 (India Standard Time)").toISOString()
+        const  placePrice = place?.price
+        const pathname = `/${id}/listing-stay-detail/checkout?startDate=${start}&endDate=${end}&placePrice=${placePrice}&nights=${nights}&guests=${totalGuests}`;
+        router.push(pathname);
+      };
+  
+      return (
+        <div className="listingSectionSidebar__wrap shadow-xl">
+          {/* PRICE */}
+          <div className="flex justify-between">
+            <span className="text-3xl font-semibold">
+              {place?.price}$
+              <span className="ml-1 text-base font-normal text-neutral-500 dark:text-neutral-400">
+                /night
+              </span>
             </span>
-          </span>
-          <StartRating />
-        </div>
-
-        {/* FORM */}
-        <form className="flex flex-col border border-neutral-200 dark:border-neutral-700 rounded-3xl ">
-          <StayDatesRangeInput className="flex-1 z-[11]" />
-          <div className="w-full border-b border-neutral-200 dark:border-neutral-700"></div>
-          <GuestsInput className="flex-1" />
-        </form>
-
-        {/* SUM */}
-        <div className="flex flex-col space-y-4">
-          <div className="flex justify-between text-neutral-6000 dark:text-neutral-300">
-            <span>$119 x 3 night</span>
-            <span>$357</span>
+            <StartRating />
           </div>
-          <div className="flex justify-between text-neutral-6000 dark:text-neutral-300">
-            <span>Service charge</span>
-            <span>$0</span>
-          </div>
-          <div className="border-b border-neutral-200 dark:border-neutral-700"></div>
-          <div className="flex justify-between font-semibold">
-            <span>Total</span>
-            <span>$199</span>
-          </div>
-        </div>
-
-        {/* SUBMIT */}
-        <ButtonPrimary href={"/checkout"}>Reserve</ButtonPrimary>
+  
+          {/* FORM */}
+          <form className="flex flex-col border border-neutral-200 dark:border-neutral-700 rounded-3 xl:px-10 px-5 py-5"> 
+            <StayDatesRangeInput className="flex-1 z-[11]" startDate={startDate} endDate={endDate} onDatesChange={handleDatesChange} /> 
+            <div className="w-full border-b border-neutral-200 dark:border-neutral-700"></div>
+             <GuestsInput onGuestsChange={handleGuestsChange} className="flex-1" /> 
+             </form>
+                 {/* SUM */}
+    <div className="flex flex-col space-y-4">
+      <div className="flex justify-between text-neutral-600 dark:text-neutral-300">
+        <span>{place?.price}$ x {nights} night{nights !== 1 ? 's' : ''}</span>
+        <span>{place?.price * nights}$</span>
       </div>
-    );
-  };
+      <div className="flex justify-between text-neutral-600 dark:text-neutral-300">
+        <span>Service charge</span>
+        <span>{serviceCharge}$</span>
+      </div>
+      <div className="border-b border-neutral-200 dark:border-neutral-700"></div>
+      <div className="flex justify-between font-semibold">
+        <span>Total</span>
+        <span>{totalPrice}$</span>
+      </div>
+    </div>
+
+    {/* SUBMIT */}
+    <ButtonPrimary onClick={handleCheckout}>Reserve</ButtonPrimary>
+  </div>
+)
+      }
+      }}
 
   setTimeout(()=>{
     setVisibility(true)

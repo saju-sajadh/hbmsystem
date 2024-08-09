@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Fragment, useState, FC } from "react";
+import React, { Fragment, useState } from "react";
 import { Popover, Transition } from "@headlessui/react";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import DatePickerCustomHeaderTwoMonth from "@/components/DatePickerCustomHeaderTwoMonth";
@@ -8,28 +8,17 @@ import DatePickerCustomDay from "@/components/DatePickerCustomDay";
 import DatePicker from "react-datepicker";
 import ClearDataButton from "@/app/(client-components)/(HeroSearchForm)/ClearDataButton";
 
-export interface StayDatesRangeInputProps {
-  className?: string;
-}
 
-const StayDatesRangeInput: FC<StayDatesRangeInputProps> = ({
-  className = "flex-1",
-}) => {
-  const [startDate, setStartDate] = useState<Date | null>(
-    new Date("2023/02/06")
-  );
-  const [endDate, setEndDate] = useState<Date | null>(new Date("2023/02/23"));
-  //
+const StayDatesRangeInput = ({ className = "flex-1", startDate, endDate, onDatesChange }) => {
 
-  const onChangeDate = (dates: [Date | null, Date | null]) => {
+  const onChangeDate = (dates) => {
     const [start, end] = dates;
-    setStartDate(start);
-    setEndDate(end);
+    onDatesChange({ startDate: start, endDate: end });
   };
 
   const renderInput = () => {
     return (
-      <>
+      <React.Fragment>
         <div className="text-neutral-300 dark:text-neutral-400">
           <CalendarIcon className="w-5 h-5 lg:w-7 lg:h-7" />
         </div>
@@ -51,14 +40,14 @@ const StayDatesRangeInput: FC<StayDatesRangeInputProps> = ({
             {"Check in - Check out"}
           </span>
         </div>
-      </>
+      </React.Fragment>
     );
   };
 
   return (
     <Popover className={`StayDatesRangeInput z-10 relative flex ${className}`}>
       {({ open }) => (
-        <>
+        <React.Fragment>
           <Popover.Button
             className={`flex-1 flex relative p-3 items-center space-x-3 focus:outline-none ${
               open ? "shadow-lg" : ""
@@ -100,7 +89,7 @@ const StayDatesRangeInput: FC<StayDatesRangeInputProps> = ({
               </div>
             </Popover.Panel>
           </Transition>
-        </>
+        </React.Fragment>
       )}
     </Popover>
   );

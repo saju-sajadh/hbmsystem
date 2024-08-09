@@ -7,12 +7,18 @@ import MenuBar from "@/shared/MenuBar";
 import SwitchDarkMode from "@/shared/SwitchDarkMode";
 import HeroSearchForm2MobileFactory from "../(HeroSearchForm2Mobile)/HeroSearchForm2MobileFactory";
 import LangDropdown from "./LangDropdown";
+import { useUser } from "@clerk/nextjs";
+import AvatarDropdown from "./AvatarDropdown";
 
-export interface MainNav1Props {
-  className?: string;
-}
 
-const MainNav1: FC<MainNav1Props> = ({ className = "" }) => {
+
+
+
+const MainNav1 =  ({ className = "" }) => {
+
+ const {user} = useUser()
+ console.log(user)
+
   return (
     <div className={`nc-MainNav1 relative z-10 ${className}`}>
       <div className="px-4 lg:container h-20 relative flex justify-between">
@@ -32,9 +38,9 @@ const MainNav1: FC<MainNav1Props> = ({ className = "" }) => {
             <SwitchDarkMode />
             <SearchDropdown className="flex items-center" />
             <div className="px-1" />
-            <ButtonPrimary className="self-center" href="/login">
-              Sign up
-            </ButtonPrimary>
+               {
+                user  ? <AvatarDropdown imgUrl={user?.imageUrl}/> : <ButtonPrimary className="self-center" href="/sign-up">Sign up</ButtonPrimary>
+               }
           </div>
 
           <div className="flex xl:hidden items-center">

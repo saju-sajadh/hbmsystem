@@ -1,5 +1,5 @@
 import React, { FC, Fragment, useState } from "react";
-import CheckOutPagePageMain from "@/app/checkout/PageMain";
+import CheckOutPagePageMain from "../[id]/listing-stay-detail/checkout/PageMain";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 

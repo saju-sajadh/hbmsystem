@@ -1,23 +1,27 @@
-import { withAuth, NextRequestWithAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { authMiddleware } from '@clerk/nextjs'
+import { NextResponse } from 'next/server'
 
-export default withAuth(
-  async function middleware(request) {
-    const path = request.nextUrl.pathname;
-    const token = await request.nextauth.token;
-
-    if (token?.role !== "user") {
-      return NextResponse.redirect(new URL("/", request.url));
+export default authMiddleware({
+  publicRoutes: ['/'],
+  async afterAuth(auth, req, evt) {
+    const path = req.nextUrl.pathname
+    if (
+      auth.userId &&
+      auth.userId === process.env.NEXT_PUBLIC_ADMIN_ID &&
+      !path.startsWith('/dashboard')
+    ) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
-    
+    if (
+      auth.userId &&
+      auth.userId !== process.env.NEXT_PUBLIC_ADMIN_ID &&
+      path.startsWith('/dashboard')
+    ) {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
   },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
-  },
-);
+})
 
 export const config = {
-  matcher: ["/candidate/:path*", "/employer/:path*"],
-};
+  matcher: ['/((?!.+.[w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
+}

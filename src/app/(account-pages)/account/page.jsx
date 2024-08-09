@@ -1,132 +1,108 @@
 'use client'
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState} from "react";
 import Label from "@/components/Label";
 import Avatar from "@/shared/Avatar";
-import ButtonPrimary from "@/shared/ButtonPrimary";
 import Input from "@/shared/Input";
 import Select from "@/shared/Select";
 import Textarea from "@/shared/Textarea";
-import { useSession } from "next-auth/react";
-import avatar1 from "@/images/avatars/Image-1.png";
-import { ref, uploadBytes, listAll, getDownloadURL } from 'firebase/storage'
-import { storage } from 'firebaseSdk'
-import { v4 } from 'uuid'
+import { useUser } from "@clerk/nextjs";
+import {createOrupdateUser, fetchUserInfo} from '@/actions/server'
+import { LoadingOutlined } from '@ant-design/icons';
+import toast from "react-hot-toast";
+
 
 const AccountPage = () => {
-  const { data: session, status } = useSession();
 
-  const email = session?.user?.email || "******@gmail.com";
-  
-  const [userData, setUserData] = useState({
-    name: '',
-    phone: '',
-    gender: '',
-    bio: '',
-    username: '',
-    dob: '1990-07-22',
-    address: '',
-    profile: '',
-  });
+  const { user } = useUser();
+  const [profile, setProfile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState("");
+  const [dateOfbirth, setDateOfBirth] = useState("");
+  const [address, setAddress] = useState("");
+  const [bio, setBio] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [loading, setLoading] = useState(false)
 
-  const [profilePreview, setProfilePreview] = useState(avatar1);
-
-  const { name, phone, gender, bio, username, dob, address, profile } = userData;
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (session) {
-        const response = await fetch('/api/fetchinfo', {
-          cache: 'no-store',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
-
-        const data = await response.json();
-
-        console.log(data);
-        const user = data?.user || null;
-        setUserData({
-          name: user?.name || '',
-          phone: user?.contactNumber || '',
-          gender: user?.gender || '',
-          bio: user?.bio || '',
-          username: user?.username || '',
-          dob: user?.dob || '1990-07-22',
-          address: user?.address || '',
-          profile: user?.profilePicture || '',
-        });
-        setProfilePreview(user?.profilePicture || avatar1);
+  useEffect(()=>{
+     async function fetchUser(){
+      if(user){
+        const customer = await fetchUserInfo(user.id)
+        if(customer){
+          const {name, gender, dateOfBirth, address, bio, contactNumber} = customer
+          setName(name);
+          setGender(gender);
+          setDateOfBirth(dateOfBirth ? new Date(dateOfBirth).toISOString().split('T')[0] : '');
+          setAddress(address);
+          setBio(bio);
+          setContactNumber(contactNumber);
+        }
       }
-    };
-    fetchData();
-  }, [session]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserData({
-      ...userData,
-      [name]: value,
-    });
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserData({
-          ...userData,
-          profile: reader.result,
-        });
-        setProfilePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
     }
-  };
+    fetchUser()
+  },[user])
 
-  const updateInfo = async (event) => {
-    event.preventDefault();
+  const handleData = async (formdata) => {
     try {
-      const imageref = ref(storage, `profilepictures/${email}/${v4()}`)
-      await uploadBytes(imageref, userData.profile)
-      const downloadURL = await getDownloadURL(imageref)
-      const response = await fetch('/api/updateinfo', {
-        cache: 'no-store',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          name,
-          phone,
-          gender,
-          bio,
-          username,
-          dob,
-          address,
-          profile: downloadURL ? downloadURL : '',
-        }),
-      });
-      const data = await response.json();
-      console.log(data);
+      setLoading(true)
+      const name = formdata.get("name");
+      const bio = formdata.get("bio");
+      const address = formdata.get("address");
+      const dateOfbirth = formdata.get("dateOfBirth");
+      const contactNumber = formdata.get("contactNumber");
+      const gender = formdata.get("gender");
+
+      if (profile) {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const blob = new Blob([reader.result], { type: profile.type });
+          const updatedUser = await user.setProfileImage({ file: blob });
+          console.log(updatedUser);
+        };
+        reader.readAsArrayBuffer(profile);
+      }
+
+      await createOrupdateUser(
+        name,
+        bio,
+        address,
+        dateOfbirth,
+        contactNumber,
+        gender,
+        user?.primaryEmailAddress?.emailAddress,
+        user.id
+      );
+      setLoading(false)
+      toast.success('updated successfully', {position: "top-right"})
     } catch (error) {
       console.log(error);
+      setLoading(false)
+      toast.error('something went wrong', {position: "top-right"})
     }
+  };
+
+  const handleProfileChange = (event) => {
+    setProfile(event.target.files[0]);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreview(reader.result);
+    };
+    reader.readAsDataURL(event.target.files[0]);
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <form action={handleData} className="space-y-6 sm:space-y-8">
       <h2 className="text-3xl font-semibold">Account information</h2>
       <div className="w-14 border-b border-neutral-200 dark:border-neutral-700"></div>
       <div className="flex flex-col md:flex-row">
         <div className="flex-shrink-0 flex items-start">
           <div className="relative rounded-full overflow-hidden flex">
-            <Avatar  imgUrl={profilePreview} sizeClass="w-32 h-32" />
+          {preview ? (
+              <img src={preview} alt="Profile preview" className="w-32 h-32" />
+            ) : (
+              <Avatar imgUrl={user?.imageUrl} sizeClass="w-32 h-32" />
+            )}
             <div className="absolute inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center text-neutral-50 cursor-pointer">
               <svg
                 width="30"
@@ -146,9 +122,10 @@ const AccountPage = () => {
               <span className="mt-1 text-xs">Change Image</span>
             </div>
             <input
+              name='profile'
               type="file"
               className="absolute inset-0 opacity-0 cursor-pointer"
-              onChange={handleFileChange}
+              onChange={handleProfileChange}
             />
           </div>
         </div>
@@ -158,9 +135,9 @@ const AccountPage = () => {
             <Input
               name="name"
               className="mt-1.5"
-              value={userData.name}
-              onChange={handleChange}
               accept="image/jpeg, image/png"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div>
@@ -168,22 +145,22 @@ const AccountPage = () => {
             <Select
               name="gender"
               className="mt-1.5"
-              value={userData.gender}
-              onChange={handleChange}
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
             >
-              <option value='select'>Select</option>
+              <option value="">Select</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
             </Select>
           </div>
           <div>
-            <Label>Username</Label>
+            <Label>UserId</Label>
             <Input
-              name="username"
+              name="userid"
+              disabled={true}
               className="mt-1.5"
-              value={userData.username}
-              onChange={handleChange}
+              value={user?.id ? user.id : 'something went wrong'}
             />
           </div>
           <div>
@@ -192,17 +169,17 @@ const AccountPage = () => {
               name="email"
               disabled={true}
               className="mt-1.5"
-              value={email}
+              value={user?.primaryEmailAddress?.emailAddress ? user?.primaryEmailAddress?.emailAddress : 'something went wrong'}
             />
           </div>
           <div className="max-w-lg">
             <Label>Date of birth</Label>
             <Input
-              name="dob"
+              name="dateOfBirth"
               className="mt-1.5"
               type="date"
-              value={userData.dob}
-              onChange={handleChange}
+              value={dateOfbirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
             />
           </div>
           <div>
@@ -210,17 +187,17 @@ const AccountPage = () => {
             <Input
               name="address"
               className="mt-1.5"
-              value={userData.address}
-              onChange={handleChange}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
             />
           </div>
           <div>
             <Label>Phone number</Label>
             <Input
-              name="phone"
+              name="contactNumber"
               className="mt-1.5"
-              value={userData.phone}
-              onChange={handleChange}
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
             />
           </div>
           <div>
@@ -228,16 +205,16 @@ const AccountPage = () => {
             <Textarea
               name="bio"
               className="mt-1.5"
-              value={userData.bio}
-              onChange={handleChange}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
             />
           </div>
           <div className="pt-2">
-            <ButtonPrimary onClick={updateInfo}>Update info</ButtonPrimary>
+            <button className="ttnc-ButtonPrimary px-4 py-3 sm:px-6 rounded-xl text-sm sm:text-base font-medium disabled:bg-opacity-70 bg-primary-6000 hover:bg-primary-700 text-neutral-50" disabled={loading} >{loading ? <LoadingOutlined />: 'update info'}</button>
           </div>
         </div>
       </div>
-    </div>
+    </form>
   );
 };
 

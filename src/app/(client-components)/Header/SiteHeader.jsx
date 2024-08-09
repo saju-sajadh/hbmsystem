@@ -4,7 +4,7 @@ import React, { Fragment, useEffect, useRef, useState } from 'react';
 import Header from './Header';
 import { usePathname } from 'next/navigation';
 import MainNav2 from './MainNav2';
-import { useSession } from 'next-auth/react';
+
 
 
 
@@ -52,19 +52,14 @@ const SiteHeader = () => {
   }, [pathname]);
 
   const renderHeader = () => {
-    const { data: session, status } = useSession()
+   
     let headerClassName = "shadow-sm dark:border-b dark:border-neutral-700";
     if (PAGES_HIDE_HEADER_BORDER.includes(pathname)) {
       headerClassName = isTopOfPage
        ? ""
         : "shadow-sm dark:border-b dark:border-neutral-700";
     }
-    if(session && status === 'authenticated' && session?.role === 'user'){
-      return <Header className={headerClassName} navType='Header3' />;
-    }
-    if(session && status === 'authenticated' && session?.role === 'owner'){
-      return <Header className={headerClassName} navType='MainNav2' />;
-    }
+   
     return <Header className={headerClassName} navType="MainNav1" />;
   };
 

@@ -14,7 +14,7 @@ export interface GallerySliderProps {
   galleryImgs: (StaticImageData | string)[];
   ratioClass?: string;
   uniqueID: string;
-  href?: Route<string>;
+  href?: any;
   imageClass?: string;
   galleryClass?: string;
   navigation?: boolean;
@@ -27,7 +27,7 @@ export default function GallerySlider({
   imageClass = "",
   uniqueID = "uniqueID",
   galleryClass = "rounded-xl",
-  href = "/listing-stay-detail",
+  href,
   navigation = true,
 }: GallerySliderProps) {
   const [loaded, setLoaded] = useState(false);

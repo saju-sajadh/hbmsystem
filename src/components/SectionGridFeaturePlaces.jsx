@@ -22,7 +22,7 @@ const SectionGridFeaturePlaces = async ({
   cardType = "card2",
 }) => {
   const renderCard = (stay) => {
-    console.log(stay)
+   
     return <StayCard2 key={stay._id} data={stay} />;
   };
   await mongoose.connect(process.env.MONGO_URL)

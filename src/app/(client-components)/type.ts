@@ -14,4 +14,4 @@ export interface PropertyType {
 
 export interface ClassOfProperties extends PropertyType {}
 
-export type DateRage = [Date | null, Date | null];
+export type DateRage = [Date | null | undefined, Date | null | undefined];
