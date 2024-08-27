@@ -130,6 +130,12 @@ export const createOrupdateUser = async (name, bio, address, dateOfbirth, contac
     return JSON.parse(JSON.stringify(totalListings))
  }
 
+ export const getAllHotels= async () => {
+    await Connect();
+    const totalListings = await Place.find({})
+    return JSON.parse(JSON.stringify(totalListings))
+ }
+
 
  export const createBooking = async (formData) =>{
     try {
@@ -166,4 +172,17 @@ export const createOrupdateUser = async (name, bio, address, dateOfbirth, contac
     await Booking.findByIdAndDelete(bookingid)
     revalidatePath('/author')
     return
+ }
+
+ export const Search = async (query) => {
+    await Connect();
+    let place = await Place.findOne({
+        $or: [
+            { title: { $regex: query, $options: 'i' } },
+            { address: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } }
+        ]
+    });
+
+    return JSON.parse(JSON.stringify(place))
  }

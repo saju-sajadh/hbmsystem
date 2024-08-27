@@ -12,6 +12,9 @@ import Heading2 from "@/shared/Heading2";
 import StayCard2 from "@/components/StayCard2";
 import { useUser } from "@clerk/nextjs";
 import { getAllListings } from "@/actions/server";
+import { useSearchParams } from "next/navigation";
+
+
 
 const DEMO_STAYS = DEMO_STAY_LISTINGS.filter((_, i) => i < 12);
 export interface SectionGridHasMapProps {}
@@ -21,7 +24,10 @@ const SectionGridHasMap: FC<SectionGridHasMapProps> = () => {
   const [showFullMapFixed, setShowFullMapFixed] = useState(false);
   const [places, setplaces] = useState< any[]>([])
   const { user } = useUser()
+  
 
+  const searchParams = useSearchParams()
+  const location = searchParams.get('location')
 
   useEffect(()=>{
     async function fetchPlace(){
@@ -33,12 +39,14 @@ const SectionGridHasMap: FC<SectionGridHasMapProps> = () => {
     fetchPlace()
   },[user])
 
+
+
   return (
     <div>
       <div className="relative flex min-h-screen">
         {/* CARDSSSS */}
         <div className="min-h-screen w-full xl:w-[60%] 2xl:w-[60%] max-w-[1184px] flex-shrink-0 xl:px-8 ">
-          <Heading2 className="!mb-8" />
+          <Heading2 heading={"Stays in "+location} className="!mb-8" />
           <div className="mb-8 lg:mb-11">
             <TabFilters />
           </div>

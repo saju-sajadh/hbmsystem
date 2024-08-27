@@ -1,9 +1,12 @@
+'use client'
+
 import React, { FC, ReactNode } from "react";
 import imagePng from "@/images/hero-right2.png";
 import HeroSearchForm, {
   SearchTab,
 } from "../(client-components)/(HeroSearchForm)/HeroSearchForm";
 import Image, { StaticImageData } from "next/image";
+import { useSearchParams } from "next/navigation";
 
 export interface SectionHeroArchivePageProps {
   className?: string;
@@ -20,6 +23,8 @@ const SectionHeroArchivePage: FC<SectionHeroArchivePageProps> = ({
   currentTab,
   rightImage = imagePng,
 }) => {
+  const searchParams = useSearchParams();
+  const locationParam = searchParams.get('location');
   return (
     <div
       className={`nc-SectionHeroArchivePage flex flex-col relative ${className}`}
@@ -28,18 +33,18 @@ const SectionHeroArchivePage: FC<SectionHeroArchivePageProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-center">
         <div className="flex-shrink-0 lg:w-1/2 flex flex-col items-start space-y-6 lg:space-y-10 pb-14 lg:pb-64 xl:pb-80 xl:pr-14 lg:mr-10 xl:mr-0">
           <h2 className="font-medium text-4xl md:text-5xl xl:text-7xl leading-[110%]">
-            Tokyo, Jappan
+            {locationParam}
           </h2>
           <div className="flex items-center text-base md:text-lg text-neutral-500 dark:text-neutral-400">
             <i className="text-2xl las la-map-marked"></i>
-            <span className="ml-2.5">Jappan </span>
+            <span className="ml-2.5">{locationParam} </span>
             <span className="mx-5"></span>
             {listingType ? (
               listingType
             ) : (
               <>
                 <i className="text-2xl las la-home"></i>
-                <span className="ml-2.5">112 properties</span>
+                <span className="ml-2.5">12 properties</span>
               </>
             )}
           </div>
